@@ -1,0 +1,3 @@
+[submodule "src/decNumber"]
+	path = src/decNumber
+	url = https://github.com/dnotq/decNumber
