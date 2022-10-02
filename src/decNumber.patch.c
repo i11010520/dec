@@ -1,5 +1,6 @@
 #include "decNumber/decNumber-icu-368/decNumber.h"
 #include "decNumber/decNumber-icu-368/decContext.h"
+#include <stddef.h>
 #include <string.h>
 
 

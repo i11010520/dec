@@ -87,6 +87,8 @@ const NUMBER = struct {
         const ctx = dec.DecContext.default(dec.DEC_INIT_KIND.BASE);
 
         var num = dec.DecNumber.fromInt32(-5);
+        defer num.deinit();
+
         var i = num.toInt32(ctx);
         std.debug.print("{}\n", .{i});
     }
@@ -95,6 +97,8 @@ const NUMBER = struct {
         const ctx = dec.DecContext.default(dec.DEC_INIT_KIND.BASE);
 
         var num = dec.DecNumber.fromUInt32(5);
+        defer num.deinit();
+
         var ui = num.toUInt32(ctx);
         std.debug.print("{}\n", .{ui});
     }
@@ -104,6 +108,8 @@ const NUMBER = struct {
 
         const str = "3000";
         var num = dec.DecNumber.fromString(str, ctx);
+        defer num.deinit();
+
         var str2 = num.toString();
         var str3 = num.toEngString();
         std.debug.print("{s}\t{s}\n", .{str2, str3});
@@ -114,6 +120,8 @@ const NUMBER = struct {
 
         const str = "52223339999933";
         var num = dec.DecNumber.fromString(str, ctx);
+        defer num.deinit();
+
         var str2 = num.toString();
         var str3 = num.toEngString();
         std.debug.print("{s}\t{s}\n", .{str2, str3});
@@ -124,6 +132,8 @@ const NUMBER = struct {
 
         const str = "0.001";
         var num = dec.DecNumber.fromString(str, ctx);
+        defer num.deinit();
+
         var str2 = num.toString();
         var str3 = num.toEngString();
         std.debug.print("{s}\t{s}\n", .{str2, str3});
@@ -134,9 +144,44 @@ const NUMBER = struct {
 
         const str = "-0.2";
         var num = dec.DecNumber.fromString(str, ctx);
+        defer num.deinit();
+
         var str2 = num.toString();
         var str3 = num.toEngString();
         std.debug.print("{s}\t{s}\n", .{str2, str3});
+    }
+
+    test "get bcd" {
+        var ctx = dec.DecContext.default(dec.DEC_INIT_KIND.BASE);
+
+        const str = "52223339999933";
+        var num = dec.DecNumber.fromString(str, ctx);
+        defer num.deinit();
+
+        var bcd = num.getBCD();
+        std.debug.print("{} {} (any){any}\n", .{bcd.len, bcd[0], bcd});
+    }
+
+    test "zig bigint" {
+        const managed = std.math.big.int.Managed;
+        const allocator = std.heap.c_allocator;
+
+        var a = try managed.initSet(allocator, 1);
+        defer a.deinit();
+        var b = try managed.initSet(allocator, 2);
+        defer b.deinit();
+        var c = try managed.initSet(allocator, 6);
+        defer c.deinit();
+        var s = try managed.initSet(allocator, 0);
+        defer s.deinit();
+
+        try managed.add(&s, @ptrCast(*const managed, &a), @ptrCast(*const managed, &b));
+        var iseq = managed.eq(s, c);
+
+        const as = try s.toString(allocator, 10, .lower);
+        defer allocator.free(as);
+
+        std.debug.print("{}\t{s}\n", .{iseq, as});
     }
 };
 
