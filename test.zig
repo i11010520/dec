@@ -151,17 +151,6 @@ const NUMBER = struct {
         std.debug.print("{s}\t{s}\n", .{str2, str3});
     }
 
-    test "get bcd" {
-        var ctx = dec.DecContext.default(dec.DEC_INIT_KIND.BASE);
-
-        const str = "52223339999933";
-        var num = dec.DecNumber.fromString(str, ctx);
-        defer num.deinit();
-
-        var bcd = num.getBCD();
-        std.debug.print("{} {} (any){any}\n", .{bcd.len, bcd[0], bcd});
-    }
-
     test "zig bigint" {
         const managed = std.math.big.int.Managed;
         const allocator = std.heap.c_allocator;

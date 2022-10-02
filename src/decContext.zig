@@ -43,6 +43,7 @@ pub const DecContext = struct {
             @ptrCast([*c]c.DecContext, &dec_ctx.ctx), 
             @enumToInt(kind)
         );
+        dec_ctx.ctx.traps = 0;
 
         return dec_ctx;
     }

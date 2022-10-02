@@ -9,12 +9,13 @@ pub fn main() !void {
 
     const sn = "52223339999933";
     var num = dec.DecNumber.fromString(sn, ctx);
+    // var num = dec.DecNumber.fromInt32(5000);
     defer num.deinit();
 
     std.debug.print("before tostring: {any}\n", .{num.buf_str});
     var str = num.toString();
     std.debug.print(
-        \\str: (s){s} (any){any} (*): {*}
+        \\str: (s){s} (any){any} (*){*}
         \\&str: (any){any} (*){*}
         \\str.ptr: (any){any}
         \\
@@ -24,10 +25,11 @@ pub fn main() !void {
             str.ptr
         });
     var str_eng = num.toEngString();
-    std.debug.print("{s}\tstr: {s}\tstr_eng: {s}\n", .{sn, str, str_eng});
+    std.debug.print("str: {s}\tstr_eng: {s}\n", .{str, str_eng});
 
-    var bcd = num.getBCD();
-    std.debug.print("bcd: (s){s}, (any){any}\n", .{bcd, bcd});
+    // ctx.traps is 0, so no error
+    var ni = num.toInt32(ctx);
+    std.debug.print("toint32: {}\n", .{ni});
 
     num.deinit();
     std.debug.print("after deinit: {any}\n", .{num.buf_str});

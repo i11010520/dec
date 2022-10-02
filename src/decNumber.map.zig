@@ -6,19 +6,29 @@ pub const DECNAN = 0x20;
 pub const DECSNAN = 0x10;
 pub const DECSPECIAL = (DECINF | DECNAN | DECSNAN);
 
+// just support DECDPUN=3, no conditional compilation
 pub const DECDPUN = 3;
 pub const decNumerUnit = u16;
 
 // 2^32: ~10^10
 // 2^128: ~10^39
-pub const DECNUMDIGITS = 15;
-pub const DECNUMUNITS = ((DECNUMDIGITS + DECDPUN - 1)/DECDPUN);
+// pub const DECNUMDIGITS = 15;
+// pub const DECNUMUNITS = ((DECNUMDIGITS + DECDPUN - 1)/DECDPUN);
+
+// pub fn calNUMUNITS(digits: u32) u32 {
+//     return (digits + DECDPUN - 1)/DECDPUN;
+// }
 
 pub const DecNumber = extern struct {
+    // length of coefficient, 1 through 999,999,999
     digits: i32,
+    // exponent, -999,999,999 to 999,999,999 in general
     exponent: i32,
+    // 1 bit for sign, 3 bits for special values, 4 bits reserved
     bits: u8,
-    lsu: [DECNUMUNITS]decNumerUnit,
+    // least significant unit(lsu) first,
+    // eash unit is through 0 and 10^DECDPUN-1
+    lsu: []decNumerUnit,
 };
 
 // Conversions

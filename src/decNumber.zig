@@ -9,7 +9,7 @@ pub const DecNumber = struct {
 
     buf_str: ?[]u8 = null,
     buf_engstr: ?[]u8 = null,
-    buf_bcd: ?[]u8 = null,
+    buf_len: u32 = 0,
 
     const Self = @This();
     const allocator = std.heap.c_allocator;
@@ -23,18 +23,15 @@ pub const DecNumber = struct {
             allocator.free(buf);
             self.buf_engstr = null;
         }
-        if (self.buf_bcd) |buf| {
-            allocator.free(buf);
-            self.buf_bcd = null;
-        }
     }
 
     pub fn fromInt32(i: i32) Self {
-        var dec_num: DecNumber = .{
-            .num = undefined,
-        };
-        
+        const digits = 10;
+        const buf_len = digits + 14;
 
+        var dec_num: DecNumber = .{
+            .buf_len = buf_len
+        };
         _ = c.decNumberFromInt32(
             @ptrCast([*c]c.DecNumber, &dec_num.num),
             i
@@ -44,10 +41,12 @@ pub const DecNumber = struct {
     }
 
     pub fn fromUInt32(ui: u32) Self {
-        var dec_num: DecNumber = .{
-            .num = undefined,
-        };
+        const digits = 10;
+        const buf_len = digits + 14;
 
+        var dec_num: DecNumber = .{
+            .buf_len = buf_len
+        };
         _ = c.decNumberFromUInt32(
             @ptrCast([*c]c.DecNumber, &dec_num.num),
             ui
@@ -57,10 +56,12 @@ pub const DecNumber = struct {
     }
 
     pub fn fromString(str: []const u8, ctx: DecContext) Self {
-        var dec_num: DecNumber = .{
-            .num = undefined,
-        };
+        const digits = @intCast(u32, str.len);
+        const buf_len = digits + 14;
 
+        var dec_num: DecNumber = .{
+            .buf_len = buf_len
+        };
         _ = c.decNumberFromString(
             @ptrCast([*c]c.DecNumber, &dec_num.num),
             @ptrCast([*c]const u8, str),
@@ -73,7 +74,7 @@ pub const DecNumber = struct {
 
     pub fn toString(self: *DecNumber) []const u8 {
         if (null == self.buf_str) {
-            self.buf_str = allocator.create([c.DECNUMDIGITS+1]u8) catch |err| {
+            self.buf_str = allocator.alloc(u8, self.buf_len) catch |err| {
                 std.debug.print("{}\n", .{err});
                 @panic("c_allocator error\n");
             };
@@ -89,7 +90,7 @@ pub const DecNumber = struct {
 
     pub fn toEngString(self: *DecNumber) []const u8 {
         if (null == self.buf_engstr) {
-            self.buf_engstr = allocator.create([c.DECNUMDIGITS+1]u8) catch |err| {
+            self.buf_engstr = allocator.alloc(u8, self.buf_len) catch |err| {
                 std.debug.print("{}\n", .{err});
                 @panic("c_allocator error\n");
             };
@@ -119,23 +120,6 @@ pub const DecNumber = struct {
         );
 
         return i;
-    }
-
-    pub fn getBCD(self: *DecNumber) []u8 {
-        if (null == self.buf_bcd) {
-            self.buf_bcd = allocator.create([c.DECNUMDIGITS]u8) catch |err| {
-                std.debug.print("{}\n", .{err});
-                @panic("c_allocator error\n");
-            };
-        }
-
-        _ = c.decNumberGetBCD(
-            @ptrCast([*c]const c.DecNumber, &self.num),
-            @ptrCast([*c]u8, self.buf_bcd.?)
-        );
-        
-        const len = @intCast(usize, self.num.digits);
-        return self.buf_bcd.?[0..len];
     }
 
 
