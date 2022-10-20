@@ -1,17 +1,26 @@
 const std = @import("std");
-const c = @import("decContext.map.zig");
+const c = @import("env.zig").c;
 
-pub const C_DecContext = c.DecContext;
-pub const Rounding = c.Rounding;
-
-pub const DEC_INIT_KIND = enum(i32) {
-    BASE = 0,
-    DECIMAL32 = 32,
-    DECIMAL64 = 64,
-    DECIMAL128 = 128,
+pub const DEC_Rounding = enum(c.rounding) {
+    CEILING = c.DEC_ROUND_CEILING,
+    UP = c.DEC_ROUND_UP,
+    HALF_UP = c.DEC_ROUND_HALF_UP,
+    HALF_EVEN = c.DEC_ROUND_HALF_EVEN,
+    HALF_DOWN = c.DEC_ROUND_HALF_DOWN,
+    DOWN = c.DEC_ROUND_DOWN,
+    FLOOR = c.DEC_ROUND_FLOOR,
+    @"05UP" = c.DEC_ROUND_05UP,
+    MAX = c.DEC_ROUND_MAX,
 };
 
-pub const DEC_Condition = .{
+pub const DEC_INIT_KIND = enum(c_int) {
+    BASE = c.DEC_INIT_BASE,
+    DECIMAL32 = c.DEC_INIT_DECIMAL32,
+    DECIMAL64 = c.DEC_INIT_DECIMAL64,
+    DECIMAL128 = c.DEC_INIT_DECIMAL128,
+};
+
+pub const DEC_Status = .{
     .CS = c.DEC_Condition_CS,
     .DZ = c.DEC_Condition_DZ,
     .DI = c.DEC_Condition_DI,
@@ -30,17 +39,15 @@ pub const DEC_Condition = .{
 };
 
 pub const DecContext = struct {
-    ctx: c.DecContext,
+    ctx: c.decContext = undefined,
 
     const Self = @This();
 
     pub fn default(kind: DEC_INIT_KIND) Self {
-        var dec_ctx: DecContext = .{
-            .ctx = undefined,
-        };
+        var dec_ctx: Self = .{};
 
         _ = c.decContextDefault(
-            @ptrCast([*c]c.DecContext, &dec_ctx.ctx), 
+            @ptrCast([*c]c.decContext, &dec_ctx.ctx), 
             @enumToInt(kind)
         );
         dec_ctx.ctx.traps = 0;
@@ -48,30 +55,31 @@ pub const DecContext = struct {
         return dec_ctx;
     }
 
-    pub fn clearStatus(self: *DecContext, mask: u32) *DecContext {
+    pub fn clearStatus(self: *Self, mask: u32) *Self {
         _ = c.decContextClearStatus(
-            @ptrCast([*c]c.DecContext, &self.ctx),
+            &self.ctx,
             mask
         );
 
         return self;
     }
 
-    pub fn getRounding(self: DecContext) Rounding {
-        var res = c.decContextGetRounding(
-            @ptrCast([*c]c.DecContext, &self.ctx)
+    // Trick: set self as pointer, orelse 'cast discards const qualifier' error thrown
+    pub fn getRounding(self: *Self) DEC_Rounding {
+        var round_int = c.decContextGetRounding(
+            &self.ctx
         );
 
-        return res;
+        return @intToEnum(DEC_Rounding, round_int);
     }
 
-    pub fn getStatus(self: DecContext) u32 {
+    pub fn getStatus(self: Self) u32 {
         return self.ctx.status;
     }
 
-    pub fn restoreStatus(self: *DecContext, new_sts: u32, mask: u32) *DecContext {
+    pub fn restoreStatus(self: *Self, new_sts: u32, mask: u32) *Self {
         _ = c.decContextRestoreStatus(
-            @ptrCast([*c]c.DecContext, &self.ctx),
+            &self.ctx,
             new_sts,
             mask
         );
@@ -79,77 +87,68 @@ pub const DecContext = struct {
         return self;
     }
 
-    pub fn saveStatus(self: *DecContext, mask: u32) u32 {
+    pub fn saveStatus(self: *Self, mask: u32) u32 {
         var sts = c.decContextSaveStatus(
-            @ptrCast([*c]c.DecContext, &self.ctx),
+            &self.ctx,
             mask
         );
 
         return sts;
     }
 
-    pub fn setRounding(self: *DecContext, round: Rounding) *DecContext {
+    pub fn setRounding(self: *Self, round: DEC_Rounding) *Self {
         _ = c.decContextSetRounding(
-            @ptrCast([*c]c.DecContext, &self.ctx),
-            round
+            &self.ctx,
+            @enumToInt(round)
         );
 
         return self;
     }
 
-    pub fn setStatusFromStringQuiet(self: *DecContext, str: []const u8) *DecContext {
+    pub fn setStatusFromStringQuiet(self: *Self, str: []const u8) *Self {
         _ = c.decContextSetStatusFromStringQuiet(
-            @ptrCast([*c]c.DecContext, &self.ctx),
+            &self.ctx,
             @ptrCast([*c]const u8, str)
         );
 
         return self;
     }
 
-    pub fn setStatusQuiet(self: *DecContext, sts: u32) *DecContext {
+    pub fn setStatusQuiet(self: *Self, sts: u32) *Self {
         _ = c.decContextSetStatusQuiet(
-            @ptrCast([*c]c.DecContext, &self.ctx),
+            &self.ctx,
             sts
         );
 
         return self;
     }
 
-    pub fn statusToString(self: DecContext) []const u8 {
-        var str: []const u8 = undefined;
-
-        var len = c.patchDecContextStatusToString(
-            @ptrCast([*c]c.DecContext, &self.ctx),
-            @ptrCast([*c][*c]const u8, &str.ptr)
+    pub fn statusToString(self: Self) []const u8 {
+        const str: [*c]const u8 = c.decContextStatusToString(
+            &self.ctx,
         );
 
-        return str[0..len];
+        return std.mem.sliceTo(str, 0);
     }
 
     pub fn testEndian(flag: u8) i32 {
-        var res = c.decContextTestEndian(flag);
-
-        return res;
+        return c.decContextTestEndian(flag);
     }
 
     pub fn testSavedStatus(sts: u32, mask: u32) u32 {
-        var res = c.decContextTestSavedStatus(sts, mask);
-
-        return res;
+        return c.decContextTestSavedStatus(sts, mask);
     }
 
-    pub fn testStatus(self: DecContext, mask: u32) u32 {
-        var res = c.decContextTestStatus(
-            @ptrCast([*c]c.DecContext, &self.ctx),
+    pub fn testStatus(self: Self, mask: u32) u32 {
+        return c.decContextTestStatus(
+            &self.ctx,
             mask
         );
-
-        return res;
     }
 
-    pub fn zeroStatus(self: *DecContext) *DecContext {
+    pub fn zeroStatus(self: *Self) *Self {
         _ = c.decContextZeroStatus(
-            @ptrCast([*c]c.DecContext, &self.ctx)
+            &self.ctx
         );
 
         return self;

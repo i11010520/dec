@@ -50,21 +50,21 @@ const CONTEXT = struct {
     test "set rounding" {
         var ctx = dec.DecContext.default(dec.DEC_INIT_KIND.BASE);
         std.debug.print("before set: {}\t", .{ctx.getRounding()});
-        _ = ctx.setRounding(dec.Rounding.DEC_ROUND_UP);
+        _ = ctx.setRounding(dec.DEC_Rounding.UP);
         std.debug.print("after set: {}\n", .{ctx.getRounding()});
     }
 
     test "set status from string quiet" {
         var ctx = dec.DecContext.default(dec.DEC_INIT_KIND.BASE);
         std.debug.print("before set: {}\t", .{ctx.getStatus()});
-        _ = ctx.setStatusFromStringQuiet(dec.DEC_Condition.CS);
+        _ = ctx.setStatusFromStringQuiet(dec.DEC_Status.CS);
         std.debug.print("after set: {}\n", .{ctx.getStatus()});
     }
 
     test "status to string" {
         var ctx = dec.DecContext.default(dec.DEC_INIT_KIND.BASE);
         var str = ctx.statusToString();
-        std.debug.print("{s}({})\n", .{str, str.len});
+        std.debug.print("{s} ({})\n", .{str, str.len});
     }
 
     test "test saved status" {
@@ -74,32 +74,31 @@ const CONTEXT = struct {
 
     test "zero status" {
         var ctx = dec.DecContext.default(dec.DEC_INIT_KIND.BASE);
-        _ = ctx.setStatusFromStringQuiet(dec.DEC_Condition.CS);
+        _ = ctx.setStatusFromStringQuiet(dec.DEC_Status.CS);
         std.debug.print("before zero: {s}\t", .{ctx.statusToString()});
         _ = ctx.zeroStatus();
         std.debug.print("after zero: {}\n", .{ctx.getStatus()});
     }
 };
 
-// decNumber
 const NUMBER = struct {
     test "from/to int32" {
-        const ctx = dec.DecContext.default(dec.DEC_INIT_KIND.BASE);
+        var ctx = dec.DecContext.default(dec.DEC_INIT_KIND.BASE);
 
         var num = dec.DecNumber.fromInt32(-5);
         defer num.deinit();
 
-        var i = num.toInt32(ctx);
+        var i = num.toInt32(&ctx);
         std.debug.print("{}\n", .{i});
     }
 
     test "from/to uint32" {
-        const ctx = dec.DecContext.default(dec.DEC_INIT_KIND.BASE);
+        var ctx = dec.DecContext.default(dec.DEC_INIT_KIND.BASE);
 
         var num = dec.DecNumber.fromUInt32(5);
         defer num.deinit();
 
-        var ui = num.toUInt32(ctx);
+        var ui = num.toUInt32(&ctx);
         std.debug.print("{}\n", .{ui});
     }
 
@@ -141,9 +140,7 @@ const NUMBER = struct {
 
     test "from/to string: negative" {
         var ctx = dec.DecContext.default(dec.DEC_INIT_KIND.BASE);
-
-        const str = "-0.2";
-        var num = dec.DecNumber.fromString(str, ctx);
+        var num = dec.DecNumber.fromString("-1.21209875677777777777777777777777777777777777777777777777777771", ctx);
         defer num.deinit();
 
         var str2 = num.toString();
@@ -151,7 +148,34 @@ const NUMBER = struct {
         std.debug.print("{s}\t{s}\n", .{str2, str3});
     }
 
-    test "zig bigint" {
+    test "abs" {
+        var ctx = dec.DecContext.default(dec.DEC_INIT_KIND.BASE);
+
+        var num = dec.DecNumber.fromString("-1.21209875677777777777777777777777777777777777777777777777777771", ctx);
+        defer num.deinit();
+
+        var num2 = num.abs(&ctx);
+        var str2 = num2.toString();
+        std.debug.print("{s}\n", .{str2});
+    }
+
+    test "add/compare" {
+        var ctx = dec.DecContext.default(dec.DEC_INIT_KIND.BASE);
+
+        var num1 = dec.DecNumber.fromString("0.1", ctx);
+        defer num1.deinit();
+        var num2 = dec.DecNumber.fromString("0.2", ctx);
+        defer num2.deinit();
+        var num3 = dec.DecNumber.fromString("0.3", ctx);
+        defer num3.deinit();
+
+        var num12 = num1.add(num2, &ctx);
+        std.debug.print("num12: {any}\n", .{num12});
+        var cmp = num12.compare(num3, &ctx);
+        std.debug.print("num12 == num3: {any}\n", .{cmp.isZero()});
+    }
+
+    test "try zig stdlib's bigint" {
         const managed = std.math.big.int.Managed;
         const allocator = std.heap.c_allocator;
 
